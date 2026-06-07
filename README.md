@@ -1,12 +1,5 @@
 # Multimodal RAG using Docling, ChromaDB, and Grok API
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](#)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](#)
-[![Open Source](https://img.shields.io/badge/Open--Source-welcome-orange)](#)
-[![RAG](https://img.shields.io/badge/Pattern-RAG-purple)](#)
-[![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-blueviolet)](#)
-
-
 ## Project Overview
 
 Multimodal RAG (Retrieval-Augmented Generation) using Docling, ChromaDB, and Grok API is an open-source system designed to ingest and reason over diverse document modalities (PDFs, DOCX, images, tables, charts and plain text). It combines document understanding (Docling), local embedding models for semantic search, a persistent vector store (ChromaDB) and an LLM-based generator (Grok API) to produce grounded, context-aware answers and summaries.
@@ -81,48 +74,6 @@ flowchart LR
 	Grok --> Response[Final Response]
 ```
  
-
----
-
-## Multimodal Processing Flow
-
-```mermaid
-flowchart TD
-	subgraph ingest[Ingest]
-		A[PDF / DOCX / Image]
-		A --> B[Docling]
-		B --> C[Extract: Text / Tables / Images / Metadata]
-	end
-
-	C --> D[Chunking]
-	D --> E[Embedding]
-	E --> F[ChromaDB]
-```
-
----
-
-## Detailed RAG Pipeline
-
-```mermaid
-flowchart TD
-	Q[User Query] --> R1[Rewrite]
-	R1 --> R2[Retrieve]
-	R2 --> R3[Rerank]
-	R3 --> R4[Refine]
-	R4 --> R5[Insert Context]
-	R5 --> R6[Generate]
-	R6 --> Out[Final Response]
-```
-
-### Stage responsibilities
-
-- Rewrite: normalize or expand the user query to improve retrieval recall.
-- Retrieve: use embedding-based nearest neighbor search to fetch candidate chunks from ChromaDB.
-- Rerank: score retrieved chunks for finer relevance ordering (cross-encoder or heuristic fallback).
-- Refine: filter or transform candidates (e.g., deduplicate, prefer recent docs).
-- Insert Context: build a prompt-ready context with token budgeting, deduplication, ordering, and metadata preservation.
-- Generate: call the LLM (Grok API) with the inserted context and query to produce a grounded answer.
-
 
 ---
 
@@ -301,19 +252,6 @@ streamlit run app/ui/streamlit_app.py
 | `GROK_API_KEY` | API key for Grok API (used by `GrokGenerator`) | Yes |
 | `CHROMA_PERSIST_DIR` | Optional path for local Chroma persistence (defaults to `./chroma_db`) | No |
 
-
----
-
-## Future Enhancements
-
-- Hybrid search (dense + sparse retrieval) for improved recall.
-- Graph RAG for structured reasoning over entities and relations.
-- Multi-agent workflows to coordinate specialized models for extraction and reasoning.
-- Additional vector databases (FAISS / Pinecone / Weaviate) as optional providers.
-- Additional LLM providers (OpenAI, Claude, Gemini, Ollama) with the same `Generator` interface.
-- Improve OCR and multimodal reasoning for figures and scanned documents.
-
-
 ---
 
 ## Contribution Guide
@@ -330,53 +268,7 @@ Include tests for new features and follow existing code style. We use registry-b
 
 ---
 
-## License
-
-This project is released under the MIT License. See `LICENSE` for details.
-
-```
-MIT License
-
-Copyright (c) YEAR Your Name
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-[...]
-```
-
----
-
-## Badges
-
-Add these to the top of the README for visibility (replace placeholders as needed):
-
-- `![Python](https://img.shields.io/badge/Python-3.10%2B-blue)`
-- `![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)`
-- `![Open Source](https://img.shields.io/badge/Open--Source-welcome-orange)`
-- `![RAG](https://img.shields.io/badge/Pattern-RAG-purple)`
-- `![ChromaDB](https://img.shields.io/badge/VectorDB-ChromaDB-blueviolet)`
 
 
----
-
-## A note on reproducibility
-
-- Tests are located under `tests/` and can be run with `pytest`.
-- Use the `requirements.txt` to pin dependency versions for reproducible environments.
 
 
----
-
-If you'd like, I can:
-
-- Add an `LICENSE` file with MIT text.
-- Add example `.env.example` and a minimal `requirements.txt` (or a pinned `requirements.lock`).
-- Add a lightweight `dummy` generator registered for offline demos.
-
-
-Happy to continue — tell me which of the extras you'd like next.
