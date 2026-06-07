@@ -64,16 +64,7 @@ Main technologies used
 
 ## High-Level Architecture
 
-```mermaid
-flowchart LR
-	User[User] --> UI[Streamlit UI]
-	UI --> RAG[RAG Pipeline]
-	RAG --> Retrieval[Retrieval Layer]
-	Retrieval --> Chroma[ChromaDB]
-	RAG --> Grok[Grok API]
-	Grok --> Response[Final Response]
-```
- 
+User -> Streamlit UI -> RAG Pipeline -> Retrieval Layer -> ChromaDB -> Grok API -> Final Response
 
 ---
 
@@ -185,27 +176,13 @@ Implementation notes:
 
 ## PDF Summarization Workflow
 
-```mermaid
-sequenceDiagram
-	participant U as User
-	participant UI as Streamlit UI
-	participant DL as Docling
-	participant CK as Chunking
-	participant EM as Embedding
-	participant DB as ChromaDB
-	participant R as Retriever
-	participant G as Grok
-
-	U->>UI: Upload PDF
-	UI->>DL: Parse PDF
-	DL->>CK: Extract text/tables/figures
-	CK->>EM: Chunk and embed
-	EM->>DB: Persist embeddings
-	UI->>R: Retrieve key chunks
-	R->>G: Send context + prompt
-	G->>UI: Return Summary
-```
-
+1. User uploads PDF via Streamlit UI
+2. Docling parses PDF and extracts text, tables, images, and metadata
+3. Chunking splits extracted content into retrievable pieces
+4. Embedding computes vector representations for chunks
+5. ChromaDB persists embeddings and metadata
+6. Retriever fetches key chunks for the query
+7. Grok API generates the final summary using retrieved context
 
 ---
 
