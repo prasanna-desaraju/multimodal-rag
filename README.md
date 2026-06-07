@@ -70,29 +70,7 @@ User -> Streamlit UI -> RAG Pipeline -> Retrieval Layer -> ChromaDB -> Grok API 
 
 ## Modular Architecture Diagram
 
-```mermaid
-flowchart LR
-  UI["Streamlit UI"]
-  Pipelines["RAG and PDF Pipelines"]
-  Ingest["Ingestion - Docling"]
-  Chunk["Chunking"]
-  Embed["Embeddings - Sentence Transformers"]
-  VDB["ChromaDB (Vector Store)"]
-  Retrieval["Retriever and Reranker"]
-  Generator["Grok Generator"]
-  Models["Models (Document / Chunk)"]
-
-  UI --> Pipelines
-  Pipelines --> Retrieval
-  Pipelines --> Generator
-  Pipelines --> Ingest
-  Ingest --> Chunk
-  Chunk --> Embed
-  Embed --> VDB
-  Retrieval --> VDB
-  Models --> Pipelines
-  Models --> Ingest
-```
+![Modular Architecture](docs/modular_architecture.svg)
 
 
 ## Folder Structure

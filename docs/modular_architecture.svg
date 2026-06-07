@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360" role="img" aria-label="Modular architecture diagram">
+  <style>
+    .box { fill:#e8f0ff; stroke:#6b7dd6; stroke-width:2; rx:8; }
+    .label { font-family: Arial, sans-serif; font-size:14px; fill:#1f2d5a; }
+    .small { font-size:12px; fill:#1f2d5a; }
+    .arrow { stroke:#6b7dd6; stroke-width:2; fill:none; marker-end: url(#arrowhead); }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7dd6" />
+    </marker>
+  </defs>
+
+  <!-- UI -->
+  <rect class="box" x="30" y="20" width="160" height="48"/>
+  <text class="label" x="110" y="50" text-anchor="middle">Streamlit UI</text>
+
+  <!-- Pipelines -->
+  <rect class="box" x="250" y="20" width="200" height="60"/>
+  <text class="label" x="350" y="44" text-anchor="middle">RAG & PDF Pipelines</text>
+
+  <!-- Ingest -->
+  <rect class="box" x="250" y="110" width="140" height="48"/>
+  <text class="small" x="320" y="140" text-anchor="middle">Ingestion (Docling)</text>
+
+  <!-- Chunking -->
+  <rect class="box" x="420" y="110" width="120" height="48"/>
+  <text class="small" x="480" y="140" text-anchor="middle">Chunking</text>
+
+  <!-- Embeddings -->
+  <rect class="box" x="560" y="110" width="220" height="48"/>
+  <text class="small" x="670" y="140" text-anchor="middle">Embeddings (Sentence Transformers)</text>
+
+  <!-- VDB -->
+  <rect class="box" x="420" y="200" width="200" height="56"/>
+  <text class="label" x="520" y="235" text-anchor="middle">ChromaDB (Vector Store)</text>
+
+  <!-- Retrieval -->
+  <rect class="box" x="250" y="200" width="140" height="56"/>
+  <text class="small" x="320" y="230" text-anchor="middle">Retriever & Reranker</text>
+
+  <!-- Generator -->
+  <rect class="box" x="720" y="20" width="140" height="48"/>
+  <text class="label" x="790" y="50" text-anchor="middle">Grok Generator</text>
+
+  <!-- Models -->
+  <rect class="box" x="30" y="220" width="160" height="56"/>
+  <text class="small" x="110" y="255" text-anchor="middle">Models (Document / Chunk)</text>
+
+  <!-- Connections -->
+  <path class="arrow" d="M190 44 L250 44" />
+  <path class="arrow" d="M450 80 L450 110" />
+  <path class="arrow" d="M320 80 L320 110" />
+  <path class="arrow" d="M390 134 L420 134" />
+  <path class="arrow" d="M540 134 L560 134" />
+  <path class="arrow" d="M660 158 L660 200" />
+  <path class="arrow" d="M500 158 L500 200" />
+  <path class="arrow" d="M450 228 L420 228" />
+  <path class="arrow" d="M150 248 L250 248" />
+  <path class="arrow" d="M450 48 L720 48" />
+
+</svg>
