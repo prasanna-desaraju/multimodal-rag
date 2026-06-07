@@ -1,0 +1,7 @@
+# Minimal dependencies (adjust versions as needed)
+streamlit
+chroma-db
+sentence-transformers
+docling
+pydantic
+pydantic-settings
