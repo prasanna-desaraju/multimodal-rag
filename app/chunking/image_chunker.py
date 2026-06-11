@@ -1,4 +1,3 @@
-def chunk_image(image_path: str):
 """ImageChunker implementation placeholder.
 
 Image chunking may include OCR or region proposals; here we return a

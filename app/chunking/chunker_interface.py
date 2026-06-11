@@ -35,4 +35,4 @@ class Chunker(ABC):
     @abstractmethod
     def chunk(self, payload: Any, source_file: Optional[str] = None, page_number: Optional[int] = None, metadata: Optional[Dict[str, Any]] = None) -> List[Chunk]:
         """Break payload into chunks and return list of `Chunk` objects."""
-*** End Patch
+        

@@ -1,4 +1,3 @@
-def retrieve(query: str):
 """High-level retrieval orchestration using Rewriter -> Retriever -> Refiner.
 
 This module uses the factory functions to instantiate the requested

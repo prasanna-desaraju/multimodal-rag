@@ -26,7 +26,20 @@ class ChromaVectorStore(VectorStore):
         os.makedirs(self.persist_directory, exist_ok=True)
 
         settings = Settings(chroma_db_impl="duckdb+parquet", persist_directory=self.persist_directory)
-        self._client = chromadb.Client(settings)
+        try:
+            self._client = chromadb.Client(settings)
+        except ValueError as e:
+            # Chroma raises a ValueError when the on-disk database was created
+            # with a legacy configuration. For developer convenience we fall
+            # back to an in-memory client so the demo can run without
+            # requiring users to migrate existing data. If the user intends
+            # to keep prior data, they should run the migration tool as the
+            # error message suggests (pip install chroma-migrate; chroma-migrate).
+            logger.warning("Chroma legacy data detected: %s. Falling back to in-memory Chroma client.", e)
+            # Create a default in-memory client by not passing Settings.
+            # This avoids Pydantic validation errors for fields like
+            # `persist_directory` which must be a string when provided.
+            self._client = chromadb.Client()
 
         try:
             self._collection = self._client.get_collection(name=self.collection_name)
@@ -48,19 +61,68 @@ class ChromaVectorStore(VectorStore):
         metadatas = []
         embeddings = []
 
+        def _sanitize_value(v):
+            # Primitive types that Chroma accepts directly
+            from numbers import Number
+            try:
+                import numpy as _np
+            except Exception:
+                _np = None
+
+            if v is None:
+                return ""
+            if isinstance(v, (str, bool, Number)):
+                return v
+            if _np is not None and isinstance(v, _np.generic):
+                # numpy scalar
+                return v.item()
+            if _np is not None and isinstance(v, (_np.ndarray,)):
+                return v.tolist()
+            if isinstance(v, (list, tuple)):
+                return [_sanitize_value(x) for x in v]
+            if isinstance(v, dict):
+                return {str(k): _sanitize_value(val) for k, val in v.items()}
+            # Fallback: convert to string
+            return str(v)
+
         for d in documents:
             if d.embedding is None:
                 raise ValueError(f"Document {d.id} is missing embedding; compute embeddings before inserting")
-            ids.append(d.id)
-            texts.append(d.content)
-            metadatas.append(d.metadata or {})
-            embeddings.append(d.embedding)
+            ids.append(str(d.id))
+            texts.append(str(d.content))
+            raw_meta = d.metadata or {}
+            try:
+                sanitized = {str(k): _sanitize_value(v) for k, v in raw_meta.items()}
+            except Exception:
+                sanitized = {str(k): str(v) for k, v in (raw_meta or {}).items()}
+            # Include small structured metadata for tracing
+            if d.id is not None:
+                sanitized.setdefault("doc_id", str(d.id))
+            metadatas.append(sanitized)
+            # Normalize embeddings to plain Python lists of floats
+            emb = d.embedding
+            try:
+                # handle numpy arrays
+                import numpy as _np
+                if _np is not None and isinstance(emb, _np.ndarray):
+                    emb = emb.tolist()
+            except Exception:
+                pass
+            embeddings.append([float(x) for x in emb])
 
         self._collection.add(ids=ids, documents=texts, metadatas=metadatas, embeddings=embeddings)
 
     def query(self, embedding: List[float], top_k: int = 10, metadata: Optional[Dict[str, Any]] = None) -> List[Document]:
-        filter_arg = metadata or {}
-        res = self._collection.query(query_embeddings=[embedding], n_results=top_k, where=filter_arg, include=["metadatas", "documents", "ids", "distances"]) 
+        query_kwargs: Dict[str, Any] = {
+            "query_embeddings": [embedding],
+            "n_results": top_k,
+            "include": ["metadatas", "documents", "ids", "distances"],
+        }
+        if metadata:
+            # Only pass the `where` filter if metadata is provided and non-empty.
+            query_kwargs["where"] = metadata
+
+        res = self._collection.query(**query_kwargs)
 
         docs: List[Document] = []
         if not res:

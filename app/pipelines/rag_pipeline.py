@@ -108,7 +108,20 @@ class RagPipeline:
             result["generated"] = generated
         except Exception:
             logger.exception("Generator failed")
-            result["generated"] = {"text": "", "error": "generation_failed"}
+            # Attempt a graceful fallback to a local dummy generator if available
+            try:
+                from ..generation.generator_interface import get_generator
+
+                try:
+                    dummy = get_generator("dummy")
+                    logger.info("Falling back to dummy generator after failure")
+                    generated = dummy.generate(query, inserted_context=refined)
+                    result["generated"] = generated
+                except Exception:
+                    logger.exception("Dummy generator fallback failed")
+                    result["generated"] = {"text": "", "error": "generation_failed"}
+            except Exception:
+                result["generated"] = {"text": "", "error": "generation_failed"}
 
         return result
 

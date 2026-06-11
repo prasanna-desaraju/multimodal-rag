@@ -1,4 +1,3 @@
-def chunk_text(text: str, chunk_size: int = 512, overlap:int = 64):
 """TextChunker implementation.
 
 Splits text into character-based chunks as a placeholder. Real

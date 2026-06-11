@@ -37,4 +37,4 @@ class ParserStrategy(ABC):
     @abstractmethod
     def parse(self, file_path: str) -> List[Document]:
         """Parse the file and return a list of Document objects."""
-*** End Patch
+        

@@ -1,4 +1,3 @@
-def chunk_table(table_obj):
 """TableChunker implementation placeholder.
 
 Accepts a table-like payload (e.g., pandas.DataFrame or list-of-rows)

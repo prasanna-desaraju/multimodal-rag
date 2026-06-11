@@ -7,16 +7,23 @@ modular and keeps business logic out of the view layer.
 from __future__ import annotations
 
 import streamlit as st
+import sys
 import tempfile
 import os
 from typing import Optional
 
-from ..pipelines.pdf_summary_pipeline import PdfSummaryPipeline
-from ..pipelines.rag_pipeline import RagPipeline
-from ..retrieval.rewriter_interface import get_rewriter
-from ..retrieval.retriever_interface import get_retriever
-from ..retrieval.context_builder import DefaultContextBuilder
-from ..generation.generator_interface import get_generator
+# Ensure project root is on sys.path so absolute imports like `app.*` work
+# when Streamlit runs this file as a script.
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+from app.pipelines.pdf_summary_pipeline import PdfSummaryPipeline
+from app.pipelines.rag_pipeline import RagPipeline
+from app.retrieval.rewriter_interface import get_rewriter
+from app.retrieval.retriever_interface import get_retriever
+from app.retrieval.context_builder import DefaultContextBuilder
+from app.generation.generator_interface import get_generator
 
 
 def save_uploaded_file(uploaded) -> str:
@@ -73,7 +80,7 @@ def main():
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Generator")
-    generator_provider = st.sidebar.selectbox("Provider", options=["grok"], index=0)
+    generator_provider = st.sidebar.selectbox("Provider", options=["grok", "dummy"], index=0)
     api_key = st.sidebar.text_input("API Key (optional)")
     endpoint = st.sidebar.text_input("Endpoint (optional)")
 
