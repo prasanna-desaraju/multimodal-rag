@@ -11,6 +11,8 @@ import sys
 import tempfile
 import os
 from typing import Optional
+from dotenv import load_dotenv
+import requests
 
 # Ensure project root is on sys.path so absolute imports like `app.*` work
 # when Streamlit runs this file as a script.
@@ -38,9 +40,20 @@ def build_generator(provider: str, api_key: Optional[str], endpoint: Optional[st
         kwargs = {}
         if api_key:
             kwargs["api_key"] = api_key
+        # If an explicit endpoint is provided prefer remote provider (grok).
+        # If no endpoint provided but an API key exists, fall back to a local
+        # generator so users can run the demo with only `GROK_API_KEY` set.
         if endpoint:
             kwargs["endpoint"] = endpoint
-        gen = get_generator(provider, **kwargs)
+            gen = get_generator(provider, **kwargs)
+        else:
+            # Try local generator (registered as 'local'). It doesn't require
+            # a network endpoint but does require `transformers` to be installed.
+            try:
+                gen = get_generator("local", model_name=os.getenv("LOCAL_GEN_MODEL", "gpt2"))
+            except Exception:
+                # As a last resort, attempt the requested provider without endpoint
+                gen = get_generator(provider, **kwargs)
         return gen
     except Exception as e:
         st.error(f"Failed to construct generator: {e}")
@@ -75,21 +88,33 @@ def main():
     st.sidebar.title("Inputs")
 
     uploaded_pdf = st.sidebar.file_uploader("Upload PDF", type=["pdf"])
-    uploaded_images = st.sidebar.file_uploader("Upload Images", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
-    uploaded_docx = st.sidebar.file_uploader("Upload DOCX", type=["docx"])
+
+    # Load .env and environment variables automatically; keep UI simple
+    load_dotenv()
+    grok_api_key = os.getenv("GROK_API_KEY")
+    grok_endpoint = os.getenv("GROK_ENDPOINT")
+
+    # Health-check for configured generator endpoint
+    if st.sidebar.button("Test generator endpoint"):
+        if not grok_endpoint:
+            st.sidebar.error("GROK_ENDPOINT is not set in .env or the environment.")
+        else:
+            try:
+                resp = requests.post(grok_endpoint, json={"prompt": "health_check"}, headers={"Authorization": f"Bearer {grok_api_key}"} if grok_api_key else None, timeout=5)
+                st.sidebar.success(f"Endpoint reachable — status {resp.status_code}")
+                try:
+                    st.sidebar.json(resp.json())
+                except Exception:
+                    st.sidebar.write(resp.text[:400])
+            except Exception as e:
+                st.sidebar.error(f"Generator endpoint test failed: {e}")
 
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Generator")
-    generator_provider = st.sidebar.selectbox("Provider", options=["grok", "dummy"], index=0)
-    api_key = st.sidebar.text_input("API Key (optional)")
-    endpoint = st.sidebar.text_input("Endpoint (optional)")
-
-    st.sidebar.markdown("---")
-    st.sidebar.info("Pipeline is modular: components are injected from code.")
+    st.sidebar.info("Upload a PDF, then ask questions. No configuration in the UI.")
 
     generator = None
-    if generator_provider:
-        generator = build_generator(generator_provider, api_key or None, endpoint or None)
+    if grok_api_key or grok_endpoint:
+        generator = build_generator("grok", grok_api_key, grok_endpoint)
 
     # Main layout
     st.title("Multimodal RAG — Demo UI")
@@ -104,12 +129,16 @@ def main():
             if uploaded_pdf:
                 path = save_uploaded_file(uploaded_pdf)
                 if generator is None:
-                    st.warning("Select a generator provider and ensure configuration in the sidebar.")
+                    st.error("Generator not configured. Please set GROK_API_KEY and GROK_ENDPOINT in .env or the environment.")
                 else:
                     st.info("Summarizing PDF — this may take a while")
                     pdf_pipeline = PdfSummaryPipeline()
-                    with st.spinner("Running PDF summarization pipeline..."):
-                        sections = pdf_pipeline.summarize(path, generator=generator)
+                    try:
+                        with st.spinner("Running PDF summarization pipeline..."):
+                            sections = pdf_pipeline.summarize(path, generator=generator)
+                    except Exception as e:
+                        st.error(f"PDF summarization failed: {e}")
+                        sections = {}
 
                     # Pipeline visualization
                     st.subheader("Pipeline")
@@ -141,11 +170,15 @@ def main():
             query = st.text_input("Enter your question about the uploaded documents")
             if st.button("Ask"):
                 if generator is None:
-                    st.error("Configure a generator in the sidebar first.")
+                    st.error("Generator not configured. Please set GROK_API_KEY and GROK_ENDPOINT in .env or the environment.")
                 else:
                     pipeline = build_rag_for_ui(generator)
-                    with st.spinner("Running RAG pipeline..."):
-                        out = pipeline.run(query)
+                    try:
+                        with st.spinner("Running RAG pipeline..."):
+                            out = pipeline.run(query)
+                    except Exception as e:
+                        st.error(f"RAG pipeline failed: {e}")
+                        out = {}
 
                     st.subheader("Pipeline Visualization")
                     # Basic status mapping
@@ -161,9 +194,12 @@ def main():
             if uploaded_pdf:
                 path = save_uploaded_file(uploaded_pdf)
                 # reuse pdf pipeline to get intermediate retrieval artifacts
-                pdf_pipeline = PdfSummaryPipeline()
-                with st.spinner("Indexing and retrieving key chunks..."):
-                    sections = pdf_pipeline.summarize(path, generator=generator)
+                if generator is None:
+                    st.error("Generator not configured. Please set GROK_API_KEY and GROK_ENDPOINT in .env or the environment.")
+                else:
+                    pdf_pipeline = PdfSummaryPipeline()
+                    with st.spinner("Indexing and retrieving key chunks..."):
+                        sections = pdf_pipeline.summarize(path, generator=generator)
                 pipeline_art = sections.get("_pipeline", {})
                 retrieved = pipeline_art.get("retrieved", [])
                 if not retrieved:
@@ -179,9 +215,12 @@ def main():
             st.header("Reranked Chunks")
             if uploaded_pdf:
                 path = save_uploaded_file(uploaded_pdf)
-                pdf_pipeline = PdfSummaryPipeline()
-                with st.spinner("Indexing and reranking..."):
-                    sections = pdf_pipeline.summarize(path, generator=generator)
+                if generator is None:
+                    st.error("Generator not configured. Please set GROK_API_KEY and GROK_ENDPOINT in .env or the environment.")
+                else:
+                    pdf_pipeline = PdfSummaryPipeline()
+                    with st.spinner("Indexing and reranking..."):
+                        sections = pdf_pipeline.summarize(path, generator=generator)
                 pipeline_art = sections.get("_pipeline", {})
                 reranked = pipeline_art.get("reranked", [])
                 if not reranked:

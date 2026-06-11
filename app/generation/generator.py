@@ -11,6 +11,8 @@ import time
 import logging
 
 import requests
+import socket
+from urllib.parse import urlparse
 
 from .generator_interface import Generator, register_generator
 from ..models.document import Document
@@ -27,8 +29,34 @@ class GrokGenerator(Generator):
         self.endpoint = endpoint or "https://api.grok.example/v1/generate"
         self.headers = headers or {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
+        # Validate endpoint early to give clear errors when DNS/isolation issues exist.
+        try:
+            self._validate_endpoint(self.endpoint)
+        except Exception as e:
+            # Raise a clearer error so callers (UI/pipeline) can display helpful guidance.
+            raise RuntimeError(
+                f"Invalid or unreachable GROK endpoint '{self.endpoint}': {e}. "
+                "Set a reachable GROK_ENDPOINT in your .env or environment."
+            )
+
     def _call_provider(self, payload: Dict[str, Any], timeout: Optional[float]) -> requests.Response:
         return requests.post(self.endpoint, json=payload, headers=self.headers, timeout=timeout)
+
+    def _validate_endpoint(self, endpoint: str) -> None:
+        # Basic URL parsing and DNS resolution check to fail fast with clear message.
+        parsed = urlparse(endpoint)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            raise ValueError("endpoint must be a valid http(s) URL")
+
+        host = parsed.hostname
+        if not host:
+            raise ValueError("could not parse hostname from endpoint")
+
+        try:
+            # This will raise socket.gaierror if resolution fails.
+            socket.getaddrinfo(host, parsed.port or 443)
+        except socket.gaierror as e:
+            raise RuntimeError(f"DNS resolution failed for host '{host}': {e}") from e
 
     def generate(self, query: str, inserted_context: List[Document], timeout: Optional[float] = 30.0, retries: int = 3, **kwargs) -> Dict[str, Any]:
         # Build prompt by concatenating context and query. Avoid explicit

@@ -13,14 +13,16 @@ logger = logging.getLogger(__name__)
 
 @register_vectordb("chroma")
 class ChromaVectorStore(VectorStore):
-    def __init__(self, persist_directory: str = "./chroma_db", collection_name: str = "default"):
+    def __init__(self, persist_directory: Optional[str] = None, collection_name: str = "default"):
         try:
             import chromadb
             from chromadb.config import Settings
         except Exception as exc:
             raise NotImplementedError("Install chromadb to use ChromaVectorStore") from exc
 
-        self.persist_directory = persist_directory
+        # Allow override via environment variable to avoid legacy DB collisions.
+        env_dir = os.getenv("CHROMA_PERSIST_DIR")
+        self.persist_directory = persist_directory or env_dir or "./chroma_db_v2"
         self.collection_name = collection_name
 
         os.makedirs(self.persist_directory, exist_ok=True)
@@ -36,6 +38,9 @@ class ChromaVectorStore(VectorStore):
             # to keep prior data, they should run the migration tool as the
             # error message suggests (pip install chroma-migrate; chroma-migrate).
             logger.warning("Chroma legacy data detected: %s. Falling back to in-memory Chroma client.", e)
+            logger.info(
+                "To persist existing data, install 'chroma-migrate' and run 'chroma-migrate', then set CHROMA_PERSIST_DIR to a new directory."
+            )
             # Create a default in-memory client by not passing Settings.
             # This avoids Pydantic validation errors for fields like
             # `persist_directory` which must be a string when provided.
@@ -116,7 +121,7 @@ class ChromaVectorStore(VectorStore):
         query_kwargs: Dict[str, Any] = {
             "query_embeddings": [embedding],
             "n_results": top_k,
-            "include": ["metadatas", "documents", "ids", "distances"],
+            "include": ["metadatas", "documents", "distances"],
         }
         if metadata:
             # Only pass the `where` filter if metadata is provided and non-empty.
